@@ -4,6 +4,23 @@ import matplotlib.image as imgplt
 import numpy as np
 from sklearn.metrics import normalized_mutual_info_score, adjusted_rand_score, accuracy_score
 import os
+from scipy.optimize import linear_sum_assignment as linear_assignment
+
+def cluster_acc(y_true, y_pred):
+
+    y_true = np.array(y_true).astype(np.int64)
+    assert y_pred.size == y_true.size
+    D = max(y_pred.max(), y_true.max()) + 1
+    w = np.zeros((D, D), dtype=np.int64)
+    for i in range(y_pred.size):
+        w[y_pred[i], y_true[i]] += 1
+    ind = linear_assignment(w.max() - w)
+    sum = 0
+    for i in range(len(ind[0])):
+        j = ind[0][i]
+        k = ind[1][i]
+        sum += w[j, k]
+    return sum * 1.0 / y_pred.size
 
 def getinfo():
     file = os.listdir(r'face_images\\')
@@ -12,7 +29,7 @@ def getinfo():
         photo = os.listdir(r'face_images\\' + subfile)
         for each in photo:
             photo_name.append(r'face_images\\'+ subfile+'\\'+each)
-            print(photo_name)
+            #print(each)
             target.append(i)
         i += 1
     for path in photo_name:
@@ -22,6 +39,7 @@ def getinfo():
     print(np.array(total_photo).shape)#(200, 108000)
 
 def kmeans():
+    #print(np.array(total_photo).shape)
     y_predict = KMeans(n_clusters=10).fit(total_photo).predict(total_photo)
     result = np.array(total_photo).reshape(200, 200, 180, 3)#图像的矩阵大小为200,180,3
     return result,y_predict
@@ -35,10 +53,10 @@ def draw():
             ax = fig.add_subplot(10, 20, count+1, xticks=[], yticks=[])
             ax.imshow(result[count],cmap=plt.cm.binary, interpolation='nearest')
             count += 1
-    plt.suptitle("ACC:{:.3f}  NMI:{:.3f}  ARS:{:.3f}".format(ACC, NMI, ARI))
+    #plt.suptitle("ACC:{:.3f}  NMI:{:.3f}  ARS:{:.3f}".format(ACC, NMI, ARI))
     plt.show()
 def score():
-    ACC = accuracy_score(target, y_predict)
+    ACC = cluster_acc(target,y_predict)
     NMI = normalized_mutual_info_score(target, y_predict)
     ARI = adjusted_rand_score(target, y_predict)
     print(" ACC = ", ACC)
